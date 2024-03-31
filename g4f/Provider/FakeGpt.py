@@ -5,18 +5,17 @@ from aiohttp import ClientSession
 
 from ..typing import AsyncResult, Messages
 from .base_provider import AsyncGeneratorProvider
-from .helper import format_prompt, get_random_string
-
+from .helper import format_prompt, get_random_string  # Importing necessary modules and functions
 
 class FakeGpt(AsyncGeneratorProvider):
-    url                   = "https://chat-shared2.zhile.io"
-    supports_gpt_35_turbo = True
-    working               = True
-    _access_token         = None
-    _cookie_jar           = None
+    url                   = "https://chat-shared2.zhile.io"  # The URL for the API
+    supports_gpt_35_turbo = True  # A boolean indicating support for GPT-3.5-turbo
+    working               = True  # A boolean indicating if the provider is currently working
+    _access_token         = None  # The access token for the API
+    _cookie_jar           = None  # The cookie jar for the API
 
     @classmethod
-    async def create_async_generator(
+    async def create_async_generator(   # A class method to create an asynchronous generator
         cls,
         model: str,
         messages: Messages,
@@ -31,28 +30,28 @@ class FakeGpt(AsyncGeneratorProvider):
             "sec-ch-ua-platform": '"Linux"',
             "sec-ch-ua-mobile": "?0",
         }
-        async with ClientSession(headers=headers, cookie_jar=cls._cookie_jar) as session:
+        async with ClientSession(headers=headers, cookie_jar=cls._cookie_jar) as session:  # Creating an asynchronous context manager for the ClientSession
             if not cls._access_token:
                 async with session.get(f"{cls.url}/api/loads", params={"t": int(time.time())}, proxy=proxy) as response:
-                    response.raise_for_status()
-                    list = (await response.json())["loads"]
-                    token_ids = [t["token_id"] for t in list]
+                    response.raise_for_status()  # Raising an exception if the status code is not 2xx
+                    list = (await response.json())["loads"]  # Parsing the JSON response
+                    token_ids = [t["token_id"] for t in list]  # Extracting token_ids from the list
                 data = {
-                    "token_key": random.choice(token_ids),
-                    "session_password": get_random_string()
+                    "token_key": random.choice(token_ids),  # Choosing a random token_id
+                    "session_password": get_random_string()  # Generating a random session password
                 }
                 async with session.post(f"{cls.url}/auth/login", data=data, proxy=proxy) as response:
-                    response.raise_for_status()
+                    response.raise_for_status()  # Raising an exception if the status code is not 2xx
                 async with session.get(f"{cls.url}/api/auth/session", proxy=proxy) as response:
-                    response.raise_for_status()
-                    cls._access_token = (await response.json())["accessToken"]
-                    cls._cookie_jar = session.cookie_jar
+                    response.raise_for_status()  # Raising an exception if the status code is not 2xx
+                    cls._access_token = (await response.json())["accessToken"]  # Storing the access token
+                    cls._cookie_jar = session.cookie_jar  # Storing the cookie jar
             headers = {
                 "Content-Type": "application/json",
                 "Accept": "text/event-stream",
                 "X-Authorization": f"Bearer {cls._access_token}",
             }
-            prompt = format_prompt(messages)
+            prompt = format_prompt(messages)  # Formatting the prompt
             data = {
                 "action": "next",
                 "messages": [
@@ -83,9 +82,9 @@ class FakeGpt(AsyncGeneratorProvider):
                             line = json.loads(line)
                             if line["message"]["metadata"]["message_type"] == "next":
                                 new_message = line["message"]["content"]["parts"][0]
-                                yield new_message[len(last_message):]
+                                yield new_message[len(last_message):]  # Yielding the new message after removing the last message
                                 last_message = new_message
                         except:
                             continue
             if not last_message:
-                raise RuntimeError("No valid response")
+                raise RuntimeError("No valid response")  # Raising a RuntimeError if there is no valid response
