@@ -1,3 +1,10 @@
+# The following lines use the 'recursive-include' command to specify which directories and files to include in the documentation.
+
+# This line includes all files and directories within the 'g4f/gui/server' directory and its subdirectories.
 recursive-include g4f/gui/server *
+
+# This line includes all files and directories within the 'g4f/gui/client' directory and its subdirectories.
 recursive-include g4f/gui/client *
+
+# This line includes all files and directories within the 'g4f/Provider/npm' directory and its subdirectories.
 recursive-include g4f/Provider/npm *
