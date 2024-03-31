@@ -2,13 +2,17 @@ from __future__ import annotations
 
 import random, json
 from datetime import datetime
-from ...requests import StreamSession
+from ...requests import StreamSession  # Assuming this is a custom StreamSession class
 
 from ...typing import AsyncGenerator
 from ..base_provider import AsyncGeneratorProvider
 
 
 class MikuChat(AsyncGeneratorProvider):
+    """
+    MikuChat class is an asynchronous generator provider that supports the GPT-3.5-turbo model.
+    It creates an asynchronous generator for streaming completions from the AI model.
+    """
     url = "https://ai.okmiku.com"
     supports_gpt_35_turbo = True
 
@@ -19,6 +23,13 @@ class MikuChat(AsyncGeneratorProvider):
             messages: list[dict[str, str]],
             **kwargs
     ) -> AsyncGenerator:
+        """
+        create_async_generator is a class method that creates an asynchronous generator for streaming completions.
+        :param model: str, the AI model to use, defaults to "gpt-3.5-turbo"
+        :param messages: list[dict[str, str]], the messages to generate completions for
+        :param kwargs: dict, any additional keyword arguments
+        :return: AsyncGenerator, an asynchronous generator for streaming completions
+        """
         if not model:
             model = "gpt-3.5-turbo"
         headers = {
@@ -53,6 +64,12 @@ class MikuChat(AsyncGeneratorProvider):
                             yield chunk
 
 def k(e: str, t: int):
+    """
+    k is a function that generates a hash value based on the input string and a seed value.
+    :param e: str, the input string
+    :param t: int, the seed value
+    :return: int, the hash value
+    """
     a = len(e) & 3
     s = len(e) - a
     i = t
@@ -78,20 +95,3 @@ def k(e: str, t: int):
     elif a == 1:
         r ^= ord(e[n]) & 255
         r = (r & 65535) * c + (((r >> 16) * c & 65535) << 16) & 4294967295
-        r = (r << 15) | (r >> 17)
-        r = (r & 65535) * o + (((r >> 16) * o & 65535) << 16) & 4294967295
-        i ^= r
-
-    i ^= len(e)
-    i ^= i >> 16
-    i = (i & 65535) * 2246822507 + (((i >> 16) * 2246822507 & 65535) << 16) & 4294967295
-    i ^= i >> 13
-    i = (i & 65535) * 3266489909 + (((i >> 16) * 3266489909 & 65535) << 16) & 4294967295
-    i ^= i >> 16
-    return i & 0xFFFFFFFF
-
-def get_fingerprint() -> str:
-    return str(k(str(int(random.random() * 100000)), 256))
-
-def get_datetime() -> str:
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
