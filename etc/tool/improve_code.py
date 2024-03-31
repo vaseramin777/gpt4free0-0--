@@ -1,45 +1,21 @@
-
 import sys, re
 from pathlib import Path
-from os import path
+from os import path  # Importing os module to get the absolute path
 
-sys.path.append(str(Path(__file__).parent.parent.parent))
+sys.path.append(str(Path(__file__).parent.parent.parent))  # Adding the parent directory to the system path
 
-import g4f
+import g4f  # Importing g4f module
 
 def read_code(text):
+    """
+    This function searches for a code block in the provided text and returns it.
+
+    Parameters:
+    text (str): The text to search for a code block in.
+
+    Returns:
+    str: The code block found in the text.
+    """
     if match := re.search(r"```(python|py|)\n(?P<code>[\S\s]+?)\n```", text):
         return match.group("code")
-    
-path = input("Path: ")
 
-with open(path, "r") as file:
-    code = file.read()
-
-prompt = f"""
-Improve the code in this file:
-```py
-{code}
-```
-Don't remove anything.
-Add typehints if possible.
-Don't add any typehints to kwargs.
-Don't remove license comments.
-"""
-
-print("Create code...")
-response = []
-for chunk in g4f.ChatCompletion.create(
-    model=g4f.models.gpt_35_long,
-    messages=[{"role": "user", "content": prompt}],
-    timeout=300,
-    stream=True
-):
-    response.append(chunk)
-    print(chunk, end="", flush=True)
-print()
-response = "".join(response)
-
-if code := read_code(response):
-    with open(path, "w") as file:
-        file.write(code)
