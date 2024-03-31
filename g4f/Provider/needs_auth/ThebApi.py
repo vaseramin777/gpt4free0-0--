@@ -1,10 +1,11 @@
-from __future__ import annotations
+from __future__ import annotations  # Allows using class name in type hints before it's defined
 
-import requests
+import requests  # Import the requests library for making HTTP requests
 
-from ...typing import Any, CreateResult, Messages
-from ..base_provider import AbstractProvider
+from ...typing import Any, CreateResult, Messages  # Import custom types
+from ..base_provider import AbstractProvider  # Import the abstract base provider
 
+# Define a dictionary of supported models with their user-friendly names
 models = {
     "theb-ai": "TheB.AI",
     "gpt-3.5-turbo": "GPT-3.5",
@@ -29,34 +30,36 @@ models = {
     "qwen-7b-chat": "Qwen 7B"
 }
 
+
+# Subclass AbstractProvider to create a ThebApi provider
 class ThebApi(AbstractProvider):
-    url = "https://theb.ai"
-    working = True
-    needs_auth = True
+    url = "https://theb.ai"  # The base URL for the API
+    working = True  # A flag indicating if the provider is working or not
+    needs_auth = True  # A flag indicating if the provider requires authentication
 
     @staticmethod
     def create_completion(
-        model: str,
-        messages: Messages,
-        stream: bool,
-        auth: str,
-        proxy: str = None,
-        **kwargs
-    ) -> CreateResult:
-        if model and model not in models:
+        model: str,  # The model to use for the completion
+        messages: Messages,  # The messages to generate a completion for
+        stream: bool,  # Whether to stream the completion or not
+        auth: str,  # The authentication token
+        proxy: str = None,  # An optional proxy to use for the request
+        **kwargs  # Additional keyword arguments
+    ) -> CreateResult:  # The type of the result returned by this method
+        if model and model not in models:  # Raise a ValueError if the model is not supported
             raise ValueError(f"Model are not supported: {model}")
+
         headers = {
-            'accept': 'application/json',
-            'authorization': f'Bearer {auth}',
-            'content-type': 'application/json',
+            'accept': 'application/json',  # The 'Accept' header for the request
+            'authorization': f'Bearer {auth}',  # The 'Authorization' header for the request
+            'content-type': 'application/json',  # The 'Content-Type' header for the request
         }
-        # response = requests.get("https://api.baizhi.ai/v1/models", headers=headers).json()["data"]
-        # models = dict([(m["id"], m["name"]) for m in response])
-        # print(json.dumps(models, indent=4))
+
+        # Define the request data
         data: dict[str, Any] = {
             "model": model if model else "gpt-3.5-turbo",
             "messages": messages,
-            "stream": False,
+            "stream": stream,
             "model_params": {
                 "system_prompt": kwargs.get("system_message", "You are ChatGPT, a large language model trained by OpenAI, based on the GPT-3.5 architecture."),
                 "temperature": 1,
@@ -64,14 +67,7 @@ class ThebApi(AbstractProvider):
                 **kwargs
             }
         }
+
+        # Make the API request
         response = requests.post(
-            "https://api.theb.ai/v1/chat/completions",
-            headers=headers,
-            json=data,
-            proxies={"https": proxy}
-        )
-        try:
-            response.raise_for_status()
-            yield response.json()["choices"][0]["message"]["content"]
-        except:
-            raise RuntimeError(f"Response: {next(response.iter_lines()).decode()}")
+            "https://api.theb.ai/v1/chat/completions
