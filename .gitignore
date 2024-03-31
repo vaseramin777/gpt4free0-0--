@@ -1,8 +1,10 @@
 # Default ignored files
 /shelf/
 /workspace.xml
+
 # Editor-based HTTP Client requests
 /httpRequests/
+
 # Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
@@ -45,7 +47,39 @@ lab
 tstt.py
 providerstest.py
 prv.py
+
 # Emacs crap
 *~
 x.js
 x.py
+
+
+# Default ignored files
+# These files and directories are commonly ignored in Git repositories
+/shelf/
+/workspace.xml
+
+# Editor-based HTTP Client requests
+# These directories may contain transient or editor-specific files
+/httpRequests/
+
+# Datasource local storage ignored files
+# This directory may contain local configuration or cache files
+/dataSources/
+/dataSources.local.xml
+
+# Ignore local python virtual environment
+# This directory contains virtual environment files specific to this machine
+venv/
+
+# Ignore streamlit_chat_app.py conversations pickle
+# This file contains transient conversation data that should not be committed
+conversations.pkl
+*.pkl
+
+# Ignore accounts created by api's
+# This file contains API-generated accounts that should not be committed
+accounts.txt
+
+# Emacs crap
+# These files are temporary or editor-specific and should not be
