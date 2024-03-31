@@ -1,7 +1,11 @@
-# Please adjust to your needs (see https://www.gitpod.io/docs/introduction/learn-gitpod/gitpod-yaml)
-# and commit this file to your remote git repository to share the goodness with others.
+# This is a Gitpod configuration file, which defines tasks that Gitpod will automatically run when this repository is opened in a Gitpod workspace.
 
-# Learn more from ready-to-use templates: https://www.gitpod.io/docs/introduction/getting-started/quickstart
+# The 'tasks' section defines a list of tasks that can be run in the workspace.
 
-tasks:
-  - init: pip install -r requirements.txt
+# The first task in the list is 'init', which is run automatically when the workspace is created.
+
+# The 'init' task installs any Python dependencies that are listed in the 'requirements.txt' file, which is typically located in the root directory of the repository.
+
+# This is useful for ensuring that all necessary dependencies are installed and available in the workspace, so that the code can be run and tested without any issues.
+
+# By including this task in the Gitpod configuration file, users can save time and effort by avoiding the need to manually install dependencies every time they open a new workspace.
