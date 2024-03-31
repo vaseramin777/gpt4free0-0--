@@ -11,6 +11,10 @@ class RetryProvider(BaseRetryProvider):
     """
     A provider class to handle retries for creating completions with different providers.
 
+    This class maintains a list of provider instances, a flag to indicate whether to shuffle providers before use,
+    and a dictionary to store exceptions encountered during retries. It also keeps track of the last provider that
+    was used.
+
     Attributes:
         providers (list): A list of provider instances.
         shuffle (bool): A flag indicating whether to shuffle providers before use.
@@ -27,6 +31,11 @@ class RetryProvider(BaseRetryProvider):
     ) -> CreateResult:
         """
         Create a completion using available providers, with an option to stream the response.
+
+        This method iterates through the list of providers and attempts to create a completion using each one.
+        If the 'stream' parameter is True, only providers that support streaming are considered. If a provider
+        successfully creates a completion, the method yields tokens or results from the completion and exits.
+        If an exception occurs during the completion process, it is caught and stored in the 'exceptions' dictionary.
 
         Args:
             model (str): The model to be used for completion.
@@ -73,6 +82,10 @@ class RetryProvider(BaseRetryProvider):
         """
         Asynchronously create a completion using available providers.
 
+        This method iterates through the list of providers and attempts to create an asynchronous completion using
+        each one. If an exception occurs during the asynchronous completion process, it is caught and stored in the
+        'exceptions' dictionary.
+
         Args:
             model (str): The model to be used for completion.
             messages (Messages): The messages to be used for generating completion.
@@ -94,25 +107,4 @@ class RetryProvider(BaseRetryProvider):
                 return await asyncio.wait_for(
                     provider.create_async(model, messages, **kwargs),
                     timeout=kwargs.get("timeout", 60)
-                )
-            except Exception as e:
-                self.exceptions[provider.__name__] = e
-                if debug.logging:
-                    print(f"{provider.__name__}: {e.__class__.__name__}: {e}")
-
-        self.raise_exceptions()
-
-    def raise_exceptions(self) -> None:
-        """
-        Raise a combined exception if any occurred during retries.
-
-        Raises:
-            RetryProviderError: If any provider encountered an exception.
-            RetryNoProviderError: If no provider is found.
-        """
-        if self.exceptions:
-            raise RetryProviderError("RetryProvider failed:\n" + "\n".join([
-                f"{p}: {exception.__class__.__name__}: {exception}" for p, exception in self.exceptions.items()
-            ]))
-
-        raise RetryNoProviderError("No provider found")
+              ````
