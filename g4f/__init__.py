@@ -18,6 +18,14 @@ def get_model_and_provider(model    : Union[Model, str],
     """
     Retrieves the model and provider based on input parameters.
 
+    This function first checks if the version_check flag is enabled in debug mode. If yes, it disables the flag and checks the version.
+    It then processes the input parameters as follows:
+    - If the provider is a string, it tries to convert it to a ProviderType using the ProviderUtils.convert dictionary.
+    - If the model is a string, it tries to convert it to a Model using the ModelUtils.convert dictionary.
+    - If no provider is specified, it uses the best_provider of the model.
+    - If the provider is not working, it raises a ProviderNotWorkingError.
+    - If the provider does not support streaming and the stream argument is True, it raises a StreamNotSupportedError.
+
     Args:
         model (Union[Model, str]): The model to use, either as an object or a string identifier.
         provider (Union[ProviderType, str, None]): The provider to use, either as an object, a string identifier, or None.
@@ -38,7 +46,7 @@ def get_model_and_provider(model    : Union[Model, str],
     if debug.version_check:
         debug.version_check = False
         version.utils.check_version()
-       
+
     if isinstance(provider, str):
         if provider in ProviderUtils.convert:
             provider = ProviderUtils.convert[provider]
@@ -56,7 +64,7 @@ def get_model_and_provider(model    : Union[Model, str],
 
     if not provider:
         raise ProviderNotFoundError(f'No provider found for model: {model}')
-    
+
     if isinstance(model, Model):
         model = model.name
 
@@ -65,10 +73,10 @@ def get_model_and_provider(model    : Union[Model, str],
 
     if not ignore_working and not provider.working:
         raise ProviderNotWorkingError(f'{provider.__name__} is not working')
-    
+
     if not ignore_stream and not provider.supports_stream and stream:
         raise StreamNotSupportedError(f'{provider.__name__} does not support "stream" argument')
-    
+
     if debug.logging:
         if model:
             print(f'Using {provider.__name__} provider and {model} model')
@@ -94,138 +102,26 @@ class ChatCompletion:
         """
         Creates a chat completion using the specified model, provider, and messages.
 
-        Args:
-            model (Union[Model, str]): The model to use, either as an object or a string identifier.
-            messages (Messages): The messages for which the completion is to be created.
-            provider (Union[ProviderType, str, None], optional): The provider to use, either as an object, a string identifier, or None.
-            stream (bool, optional): Indicates if the operation should be performed as a stream.
-            auth (Union[str, None], optional): Authentication token or credentials, if required.
-            ignored (list[str], optional): List of provider names to be ignored.
-            ignore_working (bool, optional): If True, ignores the working status of the provider.
-            ignore_stream_and_auth (bool, optional): If True, ignores the stream and authentication requirement checks.
-            patch_provider (callable, optional): Function to modify the provider.
-            **kwargs: Additional keyword arguments.
-
-        Returns:
-            Union[CreateResult, str]: The result of the chat completion operation.
-
-        Raises:
-            AuthenticationRequiredError: If authentication is required but not provided.
-            ProviderNotFoundError, ModelNotFoundError: If the specified provider or model is not found.
-            ProviderNotWorkingError: If the provider is not operational.
-            StreamNotSupportedError: If streaming is requested but not supported by the provider.
-        """
-        model, provider = get_model_and_provider(model, provider, stream, ignored, ignore_working, ignore_stream_and_auth)
-
-        if not ignore_stream_and_auth and provider.needs_auth and not auth:
-            raise AuthenticationRequiredError(f'{provider.__name__} requires authentication (use auth=\'cookie or token or jwt ...\' param)')
-
-        if auth:
-            kwargs['auth'] = auth
-        
-        if "proxy" not in kwargs:
-            proxy = os.environ.get("G4F_PROXY")
-            if proxy:
-                kwargs['proxy'] = proxy
-
-        if patch_provider:
-            provider = patch_provider(provider)
-
-        result = provider.create_completion(model, messages, stream, **kwargs)
-        return result if stream else ''.join(result)
-
-    @staticmethod
-    def create_async(model    : Union[Model, str],
-                     messages : Messages,
-                     provider : Union[ProviderType, str, None] = None,
-                     stream   : bool = False,
-                     ignored  : list[str] = None,
-                     patch_provider: callable = None,
-                     **kwargs) -> Union[AsyncResult, str]:
-        """
-        Asynchronously creates a completion using the specified model and provider.
-
-        Args:
-            model (Union[Model, str]): The model to use, either as an object or a string identifier.
-            messages (Messages): Messages to be processed.
-            provider (Union[ProviderType, str, None]): The provider to use, either as an object, a string identifier, or None.
-            stream (bool): Indicates if the operation should be performed as a stream.
-            ignored (list[str], optional): List of provider names to be ignored.
-            patch_provider (callable, optional): Function to modify the provider.
-            **kwargs: Additional keyword arguments.
-
-        Returns:
-            Union[AsyncResult, str]: The result of the asynchronous chat completion operation.
-
-        Raises:
-            StreamNotSupportedError: If streaming is requested but not supported by the provider.
-        """
-        model, provider = get_model_and_provider(model, provider, False, ignored)
-
-        if stream:
-            if isinstance(provider, type) and issubclass(provider, AsyncGeneratorProvider):
-                return provider.create_async_generator(model, messages, **kwargs)
-            raise StreamNotSupportedError(f'{provider.__name__} does not support "stream" argument in "create_async"')
-
-        if patch_provider:
-            provider = patch_provider(provider)
-
-        return provider.create_async(model, messages, **kwargs)
-
-class Completion:
-    @staticmethod
-    def create(model    : Union[Model, str],
-               prompt   : str,
-               provider : Union[ProviderType, None] = None,
-               stream   : bool = False,
-               ignored  : list[str] = None, **kwargs) -> Union[CreateResult, str]:
-        """
-        Creates a completion based on the provided model, prompt, and provider.
-
-        Args:
-            model (Union[Model, str]): The model to use, either as an object or a string identifier.
-            prompt (str): The prompt text for which the completion is to be created.
-            provider (Union[ProviderType, None], optional): The provider to use, either as an object or None.
-            stream (bool, optional): Indicates if the operation should be performed as a stream.
-            ignored (list[str], optional): List of provider names to be ignored.
-            **kwargs: Additional keyword arguments.
-
-        Returns:
-            Union[CreateResult, str]: The result of the completion operation.
-
-        Raises:
-            ModelNotAllowedError: If the specified model is not allowed for use with this method.
-        """
-        allowed_models = [
-            'code-davinci-002',
-            'text-ada-001',
-            'text-babbage-001',
-            'text-curie-001',
-            'text-davinci-002',
-            'text-davinci-003'
-        ]
-        if model not in allowed_models:
-            raise ModelNotAllowedError(f'Can\'t use {model} with Completion.create()')
-
-        model, provider = get_model_and_provider(model, provider, stream, ignored)
-
-        result = provider.create_completion(model, [{"role": "user", "content": prompt}], stream, **kwargs)
-
-        return result if stream else ''.join(result)
-    
-def get_last_provider(as_dict: bool = False) -> Union[ProviderType, dict[str, str]]:
-    """
-    Retrieves the last used provider.
+        This function first retrieves the model and provider using the get_model_and_provider function.
+    It then checks if authentication is required and not provided, and raises an AuthenticationRequiredError if yes.
+    If auth is provided, it adds it to the kwargs.
+    It then checks if the provider supports streaming and if the stream argument is True. If yes, it calls the create_async_generator
+    method of the provider. Otherwise, it calls the create_completion method of the provider.
 
     Args:
-        as_dict (bool, optional): If True, returns the provider information as a dictionary.
+        model (Union[Model, str]): The model to use, either as an object or a string identifier.
+        messages (Messages): The messages for which the completion is to be created.
+        provider (Union[ProviderType, str, None], optional): The provider to use, either as an object, a string identifier, or None.
+        stream (bool, optional): Indicates if the operation should be performed as a stream.
+        auth (Union[str, None], optional): Authentication token or credentials, if required.
+        ignored (list[str], optional): List of provider names to be ignored.
+        ignore_working (bool, optional): If True, ignores the working status of the provider.
+        ignore_stream_and_auth (bool, optional): If True, ignores the stream and authentication requirement checks.
+        patch_provider (callable, optional): Function to modify the provider.
+        **kwargs: Additional keyword arguments.
 
     Returns:
-        Union[ProviderType, dict[str, str]]: The last used provider, either as an object or a dictionary.
-    """
-    last = debug.last_provider
-    if isinstance(last, BaseRetryProvider):
-        last = last.last_provider
-    if last and as_dict:
-        return {"name": last.__name__, "url": last.url}
-    return last
+        Union[CreateResult, str]: The result of the chat completion operation.
+
+    Raises:
+        AuthenticationRequiredError: If
