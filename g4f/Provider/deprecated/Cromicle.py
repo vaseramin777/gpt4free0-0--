@@ -1,27 +1,34 @@
-from __future__ import annotations
+from __future__ import annotations  # Allows using class name in type hints before it's defined
 
-from aiohttp import ClientSession
-from hashlib import sha256
-from ...typing import AsyncResult, Messages, Dict
+import asyncio
+import aiohttp
+import hashlib
+from typing import AsyncIterable, Dict, List, Optional, Union
 
-from ..base_provider import AsyncGeneratorProvider
-from ..helper import format_prompt
-
-
+# The 'Cromicle' class is an asynchronous generator provider that communicates with the Cromicle API
 class Cromicle(AsyncGeneratorProvider):
-    url: str = 'https://cromicle.top'
-    working: bool = False
-    supports_gpt_35_turbo: bool = True
+    url: str = 'https://cromicle.top'  # The base URL for the Cromicle API
+    working: bool = False  # A flag indicating if the class is currently working or not
+    supports_gpt_35_turbo: bool = True  # A flag indicating if the class supports GPT-3.5-turbo model or not
 
     @classmethod
     async def create_async_generator(
         cls,
         model: str,
-        messages: Messages,
-        proxy: str = None,
+        messages: List[Dict[str, Union[str, List[Dict[str, str]]]]],
+        proxy: Optional[str] = None,
         **kwargs
-    ) -> AsyncResult:
-        async with ClientSession(
+    ) -> AsyncIterable[str]:
+        """
+        Creates an asynchronous generator to generate responses from the Cromicle API.
+
+        :param model: The model to use for the request.
+        :param messages: The messages to send to the API.
+        :param proxy: The proxy to use for the request.
+        :param kwargs: Additional keyword arguments to pass to the 'aiohttp.ClientSession' constructor.
+        :return: An asynchronous generator that yields the response stream from the API.
+        """
+        async with aiohttp.ClientSession(
             headers=_create_header()
         ) as session:
             async with session.post(
@@ -36,15 +43,10 @@ class Cromicle(AsyncGeneratorProvider):
 
 
 def _create_header() -> Dict[str, str]:
-    return {
-        'accept': '*/*',
-        'content-type': 'application/json',
-    }
+    """
+    Creates the header for the Cromicle API request.
 
-
-def _create_payload(message: str) -> Dict[str, str]:
+    :return: A dictionary containing the header.
+    """
     return {
-        'message': message,
-        'token': 'abc',
-        'hash': sha256('abc'.encode() + message.encode()).hexdigest()
-    }
+        'accept':
