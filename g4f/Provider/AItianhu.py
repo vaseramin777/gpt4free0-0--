@@ -1,28 +1,36 @@
 from __future__ import annotations
 
 import json
+from typing import AsyncResult, Dict, Messages
 
-from ..typing import AsyncResult, Messages
+import asyncio
 from ..requests import StreamSession
 from .base_provider import AsyncGeneratorProvider, format_prompt, get_cookies
 
-
 class AItianhu(AsyncGeneratorProvider):
+    """
+    AItianhu class is an asynchronous generator provider that communicates with the AItianhu API.
+    It inherits from the AsyncGeneratorProvider base class.
+    """
     url = "https://www.aitianhu.com"
     working = False
     supports_gpt_35_turbo = True
 
     @classmethod
     async def create_async_generator(
-        cls,
-        model: str,
-        messages: Messages,
-        proxy: str = None,
-        cookies: dict = None,
-        timeout: int = 120, **kwargs) -> AsyncResult:
-        
+            cls,
+            model: str,
+            messages: Messages,
+            proxy: str = None,
+            cookies: dict = None,
+            timeout: int = 120, **kwargs) -> AsyncResult:
+        """
+        create_async_generator is a class method that creates an asynchronous generator.
+        It checks for cookies, sets up the request headers, and handles the response.
+        """
         if not cookies:
             cookies = get_cookies(domain_name='www.aitianhu.com')
+
         if not cookies:
             raise RuntimeError(f"g4f.provider.{cls.__name__} requires cookies [refresh https://www.aitianhu.com on chrome]")
 
@@ -52,11 +60,11 @@ class AItianhu(AsyncGeneratorProvider):
         }
 
         async with StreamSession(headers=headers,
-                                        cookies=cookies,
-                                        timeout=timeout,
-                                        proxies={"https": proxy},
-                                        impersonate="chrome107", verify=False) as session:
-            
+                                 cookies=cookies,
+                                 timeout=timeout,
+                                 proxies={"https": proxy},
+                                 impersonate="chrome107", verify=False) as session:
+
             async with session.post(f"{cls.url}/api/chat-process", json=data) as response:
                 response.raise_for_status()
 
