@@ -1,51 +1,55 @@
 import re
 import sys
-from pathlib import Path
-from urllib.parse import urlparse
+from pathlib import Path  # Imported to work with file paths
+from urllib.parse import urlparse  # Used to extract the netloc part of a URL
 
-sys.path.append(str(Path(__file__).parent.parent.parent))
-
-import asyncio
+# Importing required modules from the g4f package
 from g4f import models
 from g4f import ChatCompletion
 from g4f.Provider.base_provider import BaseProvider
+from g4f import debug  # For logging purposes
+
+# Importing a utility function from a local testing module
 from etc.testing._providers import get_providers
 
-from g4f import debug
-
+# Setting debug.logging to True for enabling logging
 debug.logging = True
 
-
+# An async function to test a single provider
 async def test_async(provider: type[BaseProvider]):
-    if not provider.working:
-        return False
+    if not provider.working:  # If the provider is not working
+        return False  # Return False
+
     messages = [{"role": "user", "content": "Hello Assistant!"}]
     try:
         response = await asyncio.wait_for(ChatCompletion.create_async(
-            model=models.default,
+            model=models.default,  # Using the default model
             messages=messages,
             provider=provider
-        ), 30)
-        return bool(response)
+        ), 30)  # Waiting for the response for a maximum of 30 seconds
+        return bool(response)  # Return True if the response is not empty, otherwise False
     except Exception as e:
         if debug.logging:
             print(f"{provider.__name__}: {e.__class__.__name__}: {e}")
-        return False
+        return False  # Return False if any exception occurs
 
 
+# An async function to test a list of providers
 async def test_async_list(providers: list[type[BaseProvider]]):
     responses: list = [
-        test_async(_provider)
+        test_async(_provider)  # Testing each provider asynchronously
         for _provider in providers
     ]
-    return await asyncio.gather(*responses)
+    return await asyncio.gather(*responses)  # Gathering the results
 
 
+# A function to print the provider information
 def print_providers():
 
-    providers = get_providers()
-    responses = asyncio.run(test_async_list(providers))
+    providers = get_providers()  # Getting the list of providers
+    responses = asyncio.run(test_async_list(providers))  # Testing the providers
 
+    # Printing the table header
     for type in ("GPT-4", "GPT-3.5", "Other"):
         lines = [
             "",
@@ -54,6 +58,8 @@ def print_providers():
             "| Website | Provider | GPT-3.5 | GPT-4 | Stream | Status | Auth |",
             "| ------  | -------  | ------- | ----- | ------ | ------ | ---- |",
         ]
+
+        # Printing the table rows for each provider
         for is_working in (True, False):
             for idx, _provider in enumerate(providers):
                 if is_working != _provider.working:
@@ -67,29 +73,31 @@ def print_providers():
                     do_continue = True
                 if not do_continue:
                     continue
-                netloc = urlparse(_provider.url).netloc
-                website = f"[{netloc}]({_provider.url})"
+                netloc = urlparse(_provider.url).netloc  # Extracting the netloc part of the URL
+                website = f"[{netloc}]({_provider.url})"  # Creating the website link
 
-                provider_name = f"`g4f.Provider.{_provider.__name__}`"
+                provider_name = f"`g4f.Provider.{_provider.__name__}`"  # Creating the provider name
 
-                has_gpt_35 = "✔️" if _provider.supports_gpt_35_turbo else "❌"
-                has_gpt_4 = "✔️" if _provider.supports_gpt_4 else "❌"
-                stream = "✔️" if _provider.supports_stream else "❌"
+                has_gpt_35 = "✔️" if _provider.supports_gpt_35_turbo else "❌"  # Checking if the provider supports GPT-3.5
+                has_gpt_4 = "✔️" if _provider.supports_gpt_4 else "❌"  # Checking if the provider supports GPT-4
+                stream = "✔️" if _provider.supports_stream else "❌"  # Checking if the provider supports streaming
                 if _provider.working:
-                    status = '![Active](https://img.shields.io/badge/Active-brightgreen)'
+                    status = '![Active](https://img.shields.io/badge/Active-brightgreen)'  # Setting the status to active
                     if responses[idx]:
-                        status = '![Active](https://img.shields.io/badge/Active-brightgreen)'
+                        status = '![Active](https://img.shields.io/badge/Active-brightgreen)'  # If the provider passed the test, setting the status to active
                     else:
-                        status = '![Unknown](https://img.shields.io/badge/Unknown-grey)'
+                        status = '![Unknown](https://img.shields.io/badge/Unknown-grey)'  # If the provider failed the test, setting the status to unknown
                 else:
-                    status = '![Inactive](https://img.shields.io/badge/Inactive-red)'
-                auth = "✔️" if _provider.needs_auth else "❌"
+                    status = '![Inactive](https://img.shields.io/badge/Inactive-red)'  # Setting the status to inactive
+                auth = "✔️" if _provider.needs_auth else "❌"  # Checking if the provider needs authentication
 
                 lines.append(
                     f"| {website} | {provider_name} | {has_gpt_35} | {has_gpt_4} | {stream} | {status} | {auth} |"
                 )
-        print("\n".join(lines))
+        print("\n".join(lines))  # Printing the table rows
 
+
+# A function to print the model information
 def print_models():
     base_provider_names = {
         "cohere": "Cohere",
@@ -107,33 +115,4 @@ def print_models():
 
     lines = [
         "| Model | Base Provider | Provider | Website |",
-        "| ----- | ------------- | -------- | ------- |",
-    ]
 
-    _models = get_models()
-    for model in _models:
-        if not model.best_provider or model.best_provider.__name__ not in provider_urls:
-            continue
-
-        name = re.split(r":|/", model.name)[-1]
-        base_provider = base_provider_names[model.base_provider]
-        provider_name = f"g4f.provider.{model.best_provider.__name__}"
-        provider_url = provider_urls[model.best_provider.__name__]
-        netloc = urlparse(provider_url).netloc
-        website = f"[{netloc}]({provider_url})"
-
-        lines.append(f"| {name} | {base_provider} | {provider_name} | {website} |")
-
-    print("\n".join(lines))
-
-
-def get_models():
-    _models = [item[1] for item in models.__dict__.items()]
-    _models = [model for model in _models if type(model) is models.Model]
-    return [model for model in _models if model.name not in ["gpt-3.5-turbo", "gpt-4"]]
-
-
-if __name__ == "__main__":
-    print_providers()
-    print("\n", "-" * 50, "\n")
-    print_models()
