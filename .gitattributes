@@ -1,2 +1,2 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# Automatically detect text files and normalize line endings
+* text=auto  # This command uses the 'auto' option to detect text files in the current directory and normalize line endings to LF format. This can help ensure that text files are read correctly and consistently across different systems and editors.
