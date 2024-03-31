@@ -1,23 +1,23 @@
-from __future__ import annotations
+from __future__ import annotations  # Allows for forward references of annotations
 
-from ...typing import Messages
-from ..base_provider import AsyncProvider, format_prompt
-from ..helper import get_cookies
-from ...requests import StreamSession
+from ...typing import Messages  # Import Messages type from ...typing module
+from ..base_provider import AsyncProvider, format_prompt  # Import AsyncProvider and format_prompt from base_provider module
+from ..helper import get_cookies  # Import get_cookies from helper module
+from ...requests import StreamSession  # Import StreamSession from requests module
 
-class Aichat(AsyncProvider):
-    url = "https://chat-gpt.org/chat"
-    working = False
-    supports_gpt_35_turbo = True
+class Aichat(AsyncProvider):  # Define a new class Aichat that inherits from AsyncProvider
+    url = "https://chat-gpt.org/chat"  # Set the url attribute
+    working = False  # Set the working attribute
+    supports_gpt_35_turbo = True  # Set the supports_gpt_35_turbo attribute
 
-    @staticmethod
+    @staticmethod  # Define a static method
     async def create_async(
-        model: str,
-        messages: Messages,
-        proxy: str = None, **kwargs) -> str:
-        
+            model: str,  # The model parameter is a string
+            messages: Messages,  # The messages parameter is of type Messages
+            proxy: str = None, **kwargs) -> str:  # The proxy parameter is a string and is optional, **kwargs allows for any number of keyword arguments
+
         cookies = get_cookies('chat-gpt.org') if not kwargs.get('cookies') else kwargs.get('cookies')
-        if not cookies:
+        if not cookies:  # If cookies are not present
             raise RuntimeError(
                 "g4f.provider.Aichat requires cookies, [refresh https://chat-gpt.org on chrome]"
             )
@@ -42,23 +42,20 @@ class Aichat(AsyncProvider):
                                     cookies=cookies,
                                     timeout=6,
                                     proxies={"https": proxy} if proxy else None,
-                                    impersonate="chrome110", verify=False) as session:
+                                    impersonate="chrome110", verify=False) as session:  # Create a new StreamSession object
 
             json_data = {
-                "message": format_prompt(messages),
-                "temperature": kwargs.get('temperature', 0.5),
+                "message": format_prompt(messages),  # Format the messages using the format_prompt function
+                "temperature": kwargs.get('temperature', 0.5),  # Get the temperature from kwargs, default is 0.5
                 "presence_penalty": 0,
-                "top_p": kwargs.get('top_p', 1),
+                "top_p": kwargs.get('top_p', 1),  # Get the top_p from kwargs, default is 1
                 "frequency_penalty": 0,
             }
 
             async with session.post("https://chat-gpt.org/api/text",
-                                    json=json_data) as response:
+                                    json=json_data) as response:  # Send a POST request with json data
 
-                response.raise_for_status()
-                result = await response.json()
+                response.raise_for_status()  # Raise an exception if the status code is not 2xx
+                result = await response.json()  # Parse the response as JSON
 
-                if not result['response']:
-                    raise Exception(f"Error Response: {result}")
-
-                return result["message"]
+               
