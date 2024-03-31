@@ -1,22 +1,33 @@
-requests
-pycryptodome
-curl_cffi>=0.5.10
-aiohttp
-certifi
-browser_cookie3
-PyExecJS
-duckduckgo-search
-nest_asyncio
-werkzeug
-loguru
-pillow
-platformdirs
-fastapi
-uvicorn
-flask
-py-arkose-generator
-async-property
-undetected-chromedriver
-brotli
-beautifulsoup4
-setuptools
+# requests: This library is used to make HTTP requests in Python. It abstracts the complexities of making requests behind a simple API, 
+# allowing you to send organized and consistent requests.
+
+# pycryptodome: A self-contained Python package of low-level cryptographic primitives. It is a drop-in replacement for the PyCrypto library.
+
+# curl_cffi: A CFFI-based Python interface to libcurl, a powerful URL transfer library. This library provides a Pythonic API while 
+# leveraging the performance and flexibility of libcurl.
+
+# aiohttp: A Python library for creating asynchronous HTTP clients/servers with async/await syntax. It simplifies the process of writing 
+# concurrent network code in Python.
+
+# certifi: A package that provides Mozilla's CA certificate bundle to Python's SSL module. It helps ensure secure connections to websites 
+# and APIs.
+
+# browser_cookie3: A library for managing cookies in Python. It allows you to extract cookies from web browsers and use them in your 
+# Python scripts, enabling more realistic web scraping and automation.
+
+# PyExecJS: A Python wrapper for the JavaScript engine, allowing you to execute JavaScript code from Python. It supports various 
+# JavaScript engines, including V8, SpiderMonkey, and JScript.
+
+# duckduckgo-search: A Python library for performing searches using the DuckDuckGo search engine. It provides a simple API for sending 
+# search queries and retrieving results.
+
+# nest_asyncio: A utility library that enables the use of async/await syntax within nested event loops, which is often required in 
+# libraries like FastAPI and Flask.
+
+# werkzeug: A comprehensive WSGI web application library for Python. It provides various utilities for building web applications, 
+# including request handling, routing, and security features.
+
+# pillow: A friendly PIL fork, providing an easy-to-use interface for image processing tasks in Python. It supports a wide range of 
+# image file formats and provides various image manipulation functions.
+
+# platformdirs: A library for determining appropriate directories for various purposes,
