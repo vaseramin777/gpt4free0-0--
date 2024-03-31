@@ -6,19 +6,22 @@ from .. import debug
 from ..typing import CreateResult, Messages
 from ..base_provider import BaseProvider, ProviderType
 
+# system_message:
+# A string containing a message that explains the image creation capability.
+# This message will be prefixed to messages.
 system_message = """
 You can generate custom images with the DALL-E 3 image generator.
 To generate an image with a prompt, do this:
-<img data-prompt=\"keywords for the image\">
+<img data-prompt="keywords for the image">
 Don't use images with data uri. It is important to use a prompt instead.
-<img data-prompt=\"image caption\">
+<img data-prompt="image caption">
 """
 
 class CreateImagesProvider(BaseProvider):
     """
     Provider class for creating images based on text prompts.
 
-    This provider handles image creation requests embedded within message content, 
+    This provider handles image creation requests embedded within message content,
     using provided image creation functions.
 
     Attributes:
@@ -51,14 +54,23 @@ class CreateImagesProvider(BaseProvider):
             system_message (str, optional): System message to be prefixed to messages. Defaults to a predefined message.
             include_placeholder (bool, optional): Whether to include image placeholders in the output. Defaults to True.
         """
+        # The underlying provider to handle non-image related tasks.
         self.provider = provider
+        # Function to create images synchronously.
         self.create_images = create_images
+        # Function to create images asynchronously.
         self.create_images_async = create_async
+        # System message to be prefixed to messages.
         self.system_message = system_message
+        # Flag to determine whether to include the image placeholder in the output.
         self.include_placeholder = include_placeholder
+        # Name of the provider.
         self.__name__ = provider.__name__
+        # URL of the provider.
         self.url = provider.url
+        # Indicates if the provider is operational.
         self.working = provider.working
+        # Indicates if the provider supports streaming.
         self.supports_stream = provider.supports_stream
 
     def create_completion(
@@ -81,31 +93,48 @@ class CreateImagesProvider(BaseProvider):
             CreateResult: Yields chunks of the processed messages, including image data if applicable.
 
         Note:
-            This method processes messages to detect image creation prompts. When such a prompt is found, 
+            This method processes messages to detect image creation prompts. When such a prompt is found,
             it calls the synchronous image creation function and includes the resulting image in the output.
         """
+        # Prefix the messages with the system message.
         messages.insert(0, {"role": "system", "content": self.system_message})
         buffer = ""
+        # Iterate over chunks of the response from the provider.
         for chunk in self.provider.create_completion(model, messages, stream, **kwargs):
+            # If the buffer is not empty or the chunk contains an image prompt.
             if buffer or "<" in chunk:
                 buffer += chunk
+                # If the buffer contains an image prompt.
                 if ">" in buffer:
+                    # Find the image prompt in the buffer.
                     match = re.search(r'<img data-prompt="(.*?)">', buffer)
+                    # If an image prompt is found.
                     if match:
+                        # Extract the placeholder and prompt from the match.
                         placeholder, prompt = match.group(0), match.group(1)
+                        # Split the buffer into two parts: before and after the placeholder.
                         start, append = buffer.split(placeholder, 1)
+                        # Yield the first part of the buffer.
                         if start:
                             yield start
+                        # If the placeholder should be included in the output.
                         if self.include_placeholder:
+                            # Yield the placeholder.
                             yield placeholder
+                        # Log the image creation prompt.
                         if debug.logging:
                             print(f"Create images with prompt: {prompt}")
+                        # Call the synchronous image creation function.
                         yield from self.create_images(prompt)
+                        # Yield the second part of the buffer.
                         if append:
                             yield append
+                    # If the buffer does not contain an image prompt, yield it.
                     else:
                         yield buffer
+                    # Clear the buffer.
                     buffer = ""
+            # If the chunk does not contain an image prompt, yield it.
             else:
                 yield chunk
 
@@ -119,32 +148,4 @@ class CreateImagesProvider(BaseProvider):
         Asynchronously creates a response, processing any image creation prompts found within the messages.
 
         Args:
-            model (str): The model to use for creation.
-            messages (Messages): The messages to process, which may contain image prompts.
-            **kwargs: Additional keyword arguments for the provider.
-
-        Returns:
-            str: The processed response string, including asynchronously generated image data if applicable.
-
-        Note:
-            This method processes messages to detect image creation prompts. When such a prompt is found, 
-            it calls the asynchronous image creation function and includes the resulting image in the output.
-        """
-        messages.insert(0, {"role": "system", "content": self.system_message})
-        response = await self.provider.create_async(model, messages, **kwargs)
-        matches = re.findall(r'(<img data-prompt="(.*?)">)', response)
-        results = []
-        placeholders = []
-        for placeholder, prompt in matches:
-            if placeholder not in placeholders:
-                if debug.logging:
-                    print(f"Create images with prompt: {prompt}")
-                results.append(self.create_images_async(prompt))
-                placeholders.append(placeholder)
-        results = await asyncio.gather(*results)
-        for idx, result in enumerate(results):
-            placeholder = placeholder[idx]
-            if self.include_placeholder:
-                result = placeholder + result
-            response = response.replace(placeholder, result)
-        return response
+            model (str
