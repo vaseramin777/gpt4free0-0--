@@ -15,11 +15,13 @@ from typing            import List, Union, Any, Dict, AnyStr
 import g4f
 from .. import debug
 
+# Enable logging for debugging purposes
 debug.logging = True
 
 class Api:
     def __init__(self, engine: g4f, debug: bool = True, sentry: bool = False,
                  list_ignored_providers: List[str] = None) -> None:
+        # Initialize the API with the provided engine, debug settings, and list of ignored providers
         self.engine = engine
         self.debug = debug
         self.sentry = sentry
@@ -28,38 +30,53 @@ class Api:
         self.app = FastAPI()
         nest_asyncio.apply()
 
+        # Define data types for JSON structures
         JSONObject = Dict[AnyStr, Any]
         JSONArray = List[Any]
         JSONStructure = Union[JSONArray, JSONObject]
 
+        # Define the root route for the API
         @self.app.get("/")
         async def read_root():
             return Response(content=json.dumps({"info": "g4f API"}, indent=4), media_type="application/json")
 
+        # Define the /v1 route for the API
         @self.app.get("/v1")
         async def read_root_v1():
             return Response(content=json.dumps({"info": "Go to /v1/chat/completions or /v1/models."}, indent=4), media_type="application/json")
 
+        # Define the /v1/models route for the API
         @self.app.get("/v1/models")
         async def models():
+            # Initialize a list to store model information
             model_list = []
+
+            # Iterate over all available models
             for model in g4f.Model.__all__():
+                # Get information about the current model
                 model_info = (g4f.ModelUtils.convert[model])
+
+                # Add the model information to the list
                 model_list.append({
-                'id': model,
-                'object': 'model',
-                'created': 0,
-                'owned_by': model_info.base_provider}
+                    'id': model,
+                    'object': 'model',
+                    'created': 0,
+                    'owned_by': model_info.base_provider}
                 )
+
+            # Return the list of models as a JSON response
             return Response(content=json.dumps({
                 'object': 'list',
                 'data': model_list}, indent=4), media_type="application/json")
 
+        # Define the /v1/models/{model_name} route for the API
         @self.app.get("/v1/models/{model_name}")
         async def model_info(model_name: str):
             try:
+                # Get information about the specified model
                 model_info = (g4f.ModelUtils.convert[model_name])
 
+                # Return the model information as a JSON response
                 return Response(content=json.dumps({
                     'id': model_name,
                     'object': 'model',
@@ -67,132 +84,16 @@ class Api:
                     'owned_by': model_info.base_provider
                 }, indent=4), media_type="application/json")
             except:
+                # If the model does not exist, return an error message
                 return Response(content=json.dumps({"error": "The model does not exist."}, indent=4), media_type="application/json")
 
+        # Define the /v1/chat/completions route for the API
         @self.app.post("/v1/chat/completions")
         async def chat_completions(request: Request, item: JSONStructure = None):
+            # Initialize a dictionary with default values
             item_data = {
                 'model': 'gpt-3.5-turbo',
                 'stream': False,
             }
 
-            # item contains byte keys, and dict.get suppresses error
-            item_data.update({
-                key.decode('utf-8') if isinstance(key, bytes) else key: str(value)
-                for key, value in (item or {}).items()
-            })
-            # messages is str, need dict
-            if isinstance(item_data.get('messages'), str):
-                item_data['messages'] = ast.literal_eval(item_data.get('messages'))
-
-            model = item_data.get('model')
-            stream = True if item_data.get("stream") == "True" else False
-            messages = item_data.get('messages')
-            provider = item_data.get('provider', '').replace('g4f.Provider.', '')
-            provider = provider if provider and provider != "Auto" else None
-
-            try:
-                response = g4f.ChatCompletion.create(
-                    model=model,
-                    stream=stream,
-                    messages=messages,
-                    provider = provider,
-                    ignored=self.list_ignored_providers
-                )
-            except Exception as e:
-                logging.exception(e)
-                content = json.dumps({
-                    "error": {"message": f"An error occurred while generating the response:\n{e}"},
-                    "model": model,
-                    "provider": g4f.get_last_provider(True)
-                })
-                return Response(content=content, status_code=500, media_type="application/json")
-            completion_id = ''.join(random.choices(string.ascii_letters + string.digits, k=28))
-            completion_timestamp = int(time.time())
-
-            if not stream:
-                #prompt_tokens, _ = tokenize(''.join([message['content'] for message in messages]))
-                #completion_tokens, _ = tokenize(response)
-
-                json_data = {
-                    'id': f'chatcmpl-{completion_id}',
-                    'object': 'chat.completion',
-                    'created': completion_timestamp,
-                    'model': model,
-                    'provider': g4f.get_last_provider(True),
-                    'choices': [
-                        {
-                            'index': 0,
-                            'message': {
-                                'role': 'assistant',
-                                'content': response,
-                            },
-                            'finish_reason': 'stop',
-                        }
-                    ],
-                    'usage': {
-                        'prompt_tokens': 0, #prompt_tokens,
-                        'completion_tokens': 0, #completion_tokens,
-                        'total_tokens': 0, #prompt_tokens + completion_tokens,
-                    },
-                }
-
-                return Response(content=json.dumps(json_data, indent=4), media_type="application/json")
-
-            def streaming():
-                try:
-                    for chunk in response:
-                        completion_data = {
-                            'id': f'chatcmpl-{completion_id}',
-                            'object': 'chat.completion.chunk',
-                            'created': completion_timestamp,
-                            'model': model,
-                            'provider': g4f.get_last_provider(True),
-                            'choices': [
-                                {
-                                    'index': 0,
-                                    'delta': {
-                                        'role': 'assistant',
-                                        'content': chunk,
-                                    },
-                                    'finish_reason': None,
-                                }
-                            ],
-                        }
-                        yield f'data: {json.dumps(completion_data)}\n\n'
-                        time.sleep(0.03)
-                    end_completion_data = {
-                        'id': f'chatcmpl-{completion_id}',
-                        'object': 'chat.completion.chunk',
-                        'created': completion_timestamp,
-                        'model': model,
-                        'provider': g4f.get_last_provider(True),
-                        'choices': [
-                            {
-                                'index': 0,
-                                'delta': {},
-                                'finish_reason': 'stop',
-                            }
-                        ],
-                    }
-                    yield f'data: {json.dumps(end_completion_data)}\n\n'
-                except GeneratorExit:
-                    pass
-                except Exception as e:
-                    logging.exception(e)
-                    content = json.dumps({
-                        "error": {"message": f"An error occurred while generating the response:\n{e}"},
-                        "model": model,
-                        "provider": g4f.get_last_provider(True),
-                    })
-                    yield f'data: {content}'
-
-            return StreamingResponse(streaming(), media_type="text/event-stream")
-
-        @self.app.post("/v1/completions")
-        async def completions():
-            return Response(content=json.dumps({'info': 'Not working yet.'}, indent=4), media_type="application/json")
-
-    def run(self, ip):
-        split_ip = ip.split(":")
-        uvicorn.run(app=self.app, host=split_ip[0], port=int(split_ip[1]), use_colors=False)
+            # If the item parameter is not None, update the item_data dictionary with the
