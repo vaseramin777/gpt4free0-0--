@@ -1,24 +1,33 @@
-from __future__ import annotations
+from __future__ import annotations  # Allows using class names in annotations
 
+import asyncio
 from aiohttp import ClientSession, ClientTimeout
+from ...errors import MissingRequirementsError  # Custom error for missing requirements
+
 try:
-    from duckduckgo_search import DDGS
-    from bs4 import BeautifulSoup
-    has_requirements = True
+    from duckduckgo_search import DDGS  # Web search module
+    from bs4 import BeautifulSoup  # HTML parsing module
+    has_requirements = True  # Flag for having required modules
 except ImportError:
     has_requirements = False
-from ...errors import MissingRequirementsError
-    
-import asyncio
 
-class SearchResults():
+class SearchResults:
     def __init__(self, results: list):
+        """
+        Initialize SearchResults class with a list of SearchResultEntry objects.
+        """
         self.results = results
 
     def __iter__(self):
+        """
+        Allow iteration over SearchResults object.
+        """
         yield from self.results
 
     def __str__(self):
+        """
+        Generate a string representation of SearchResults object.
+        """
         search = ""
         for idx, result in enumerate(self.results):
             if search:
@@ -30,21 +39,32 @@ class SearchResults():
                 search += result.snippet
             search += f"\n\nSource: [[{idx}]]({result.url})"
         return search
-    
-class SearchResultEntry():
+
+class SearchResultEntry:
     def __init__(self, title: str, url: str, snippet: str, text: str = None):
+        """
+        Initialize SearchResultEntry class with title, url, snippet, and optional text.
+        """
         self.title = title
         self.url = url
         self.snippet = snippet
         self.text = text
 
     def set_text(self, text: str):
+        """
+        Set the text attribute of SearchResultEntry class.
+        """
         self.text = text
 
 def scrape_text(html: str, max_words: int = None) -> str:
+    """
+    Scrape text from the given HTML string with a maximum word count.
+    """
     soup = BeautifulSoup(html, "html.parser")
+    # Remove script and style elements
     for exclude in soup(["script", "style"]):
         exclude.extract()
+    # Select main content elements
     for selector in [
             "main",
             ".main-content-wrapper",
@@ -58,7 +78,7 @@ def scrape_text(html: str, max_words: int = None) -> str:
         if select:
             soup = select
             break
-    # Zdnet
+    # Remove specific elements for zdnet.com
     for remove in [".c-globalDisclosure"]:
         select = soup.select_one(remove)
         if select:
@@ -85,15 +105,21 @@ def scrape_text(html: str, max_words: int = None) -> str:
     return clean_text
 
 async def fetch_and_scrape(session: ClientSession, url: str, max_words: int = None) -> str:
+    """
+    Fetch the webpage content and scrape text with a maximum word count.
+    """
     try:
         async with session.get(url) as response:
             if response.status == 200:
-                html = await response.text()
+              `enter code here`                html = await response.text()
                 return scrape_text(html, max_words)
-    except:
+    except Exception:
         return
 
 async def search(query: str, n_results: int = 5, max_words: int = 2500, add_text: bool = True) -> SearchResults:
+    """
+    Search the web and return search results with optional text.
+    """
     if not has_requirements:
         raise MissingRequirementsError('Install "duckduckgo-search" and "beautifulsoup4" package')
     with DDGS() as ddgs:
@@ -136,22 +162,10 @@ async def search(query: str, n_results: int = 5, max_words: int = 2500, add_text
 
         return SearchResults(formatted_results)
 
-
 def get_search_message(prompt) -> str:
+    """
+    Generate a search message based on the user's prompt and search results.
+    """
     try:
         search_results = asyncio.run(search(prompt))
         message = f"""
-{search_results}
-
-
-Instruction: Using the provided web search results, to write a comprehensive reply to the user request.
-Make sure to add the sources of cites using [[Number]](Url) notation after the reference. Example: [[0]](http://google.com)
-If the provided search results refer to multiple subjects with the same name, write separate answers for each subject.
-
-User request:
-{prompt}
-"""
-        return message
-    except Exception as e:
-        print("Couldn't do web search:", e)
-        return prompt
