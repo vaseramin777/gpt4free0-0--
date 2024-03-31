@@ -1,31 +1,32 @@
-from __future__ import annotations
+from __future__ import annotations  # Allows using class name in type hints within the class
 
-import re
+import re  # Regular expressions module
 
-from ..requests import StreamSession
-from ..typing import Messages
-from .base_provider import AsyncProvider
-from .helper import format_prompt, get_cookies
-
+from ..requests import StreamSession  # Asynchronous HTTP requests
+from ..typing import Messages  # Type hint for messages
+from .base_provider import AsyncProvider  # Base asynchronous provider class
+from .helper import format_prompt, get_cookies  # Helper functions
 
 class ChatgptFree(AsyncProvider):
-    url                   = "https://chatgptfree.ai"
-    supports_gpt_35_turbo = True
-    working               = False
-    _post_id              = None
-    _nonce                = None
+    # ChatGPT Free provider class
+    url = "https://chatgptfree.ai"  # Base URL for the provider
+    supports_gpt_35_turbo = True  # Indicates if the provider supports GPT-3.5-turbo model
+    working = False  # Indicates if the provider is currently working
+    _post_id = None  # Post ID for the provider
+    _nonce = None  # Nonce for the provider
 
     @classmethod
     async def create_async(
-        cls,
-        model: str,
-        messages: Messages,
-        proxy: str = None,
-        timeout: int = 120,
-        cookies: dict = None,
-        **kwargs
+            cls,
+            model: str,  # Model name
+            messages: Messages,  # Messages to send
+            proxy: str = None,  # Proxy to use
+            timeout: int = 120,  # Timeout for the request
+            cookies: dict = None,  # Cookies to use
+            **kwargs  # Additional keyword arguments
     ) -> str:
-        
+        # Create an asynchronous provider instance
+
         if not cookies:
             cookies = get_cookies('chatgptfree.ai')
         if not cookies:
