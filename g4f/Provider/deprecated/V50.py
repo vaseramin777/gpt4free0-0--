@@ -1,32 +1,50 @@
-from __future__ import annotations
+from __future__ import annotations  # Allows using the class name in the class definition
 
-import uuid
+import uuid  # Used to generate a unique identifier for the user
+import requests  # Used to make HTTP requests
 
-import requests
-
-from ...typing import Any, CreateResult
-from ..base_provider import AbstractProvider
+from ...typing import Any, CreateResult  # Import Any and CreateResult from the typing module
+from ..base_provider import AbstractProvider  # Import AbstractProvider from the base_provider module
 
 
 class V50(AbstractProvider):
-    url                     = 'https://p5.v50.ltd'
-    supports_gpt_35_turbo   = True
-    supports_stream         = False
-    needs_auth              = False
-    working                 = False
+    """
+    A class representing a provider for generating completions using the V50 API.
+
+    Inherits from AbstractProvider.
+    """
+
+    url = 'https://p5.v50.ltd'  # The base URL for the V50 API
+    supports_gpt_35_turbo = True  # Whether this provider supports the GPT-3.5-turbo model
+    supports_stream = False  # Whether this provider supports streaming responses
+    needs_auth = False  # Whether this provider requires authentication
+    working = False  # Whether this provider is currently working (not used in this example)
 
     @staticmethod
     def create_completion(
-        model: str,
-        messages: list[dict[str, str]],
-        stream: bool, **kwargs: Any) -> CreateResult:
-        
+            model: str,  # The model to use for the completion
+            messages: list[dict[str, str]],  # The messages to use as context for the completion
+            stream: bool, **kwargs: Any) -> CreateResult:  # Additional keyword arguments
+        """
+        Create a completion using the V50 API.
+
+        :param model: The model to use for the completion.
+        :param messages: The messages to use as context for the completion.
+        :param stream: Whether to stream the response.
+        :param kwargs: Additional keyword arguments.
+        :return: A generator yielding the completion response.
+        """
+
         conversation = (
             "\n".join(
                 f"{message['role']}: {message['content']}" for message in messages
             )
             + "\nassistant: "
         )
+        """
+        Create a conversation string by joining the messages and adding a newline character.
+        """
+
         payload = {
             "prompt"        : conversation,
             "options"       : {},
@@ -36,6 +54,9 @@ class V50(AbstractProvider):
             "model"         : model,
             "user"          : str(uuid.uuid4())
         }
+        """
+        Create a payload dictionary with the required parameters for the V50 API request.
+        """
 
         headers = {
             'authority'         : 'p5.v50.ltd',
@@ -48,14 +69,4 @@ class V50(AbstractProvider):
             'sec-fetch-dest'    : 'empty',
             'sec-fetch-mode'    : 'cors',
             'sec-fetch-site'    : 'same-origin',
-            'user-agent'        : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36'
-        }
-        response = requests.post(
-            "https://p5.v50.ltd/api/chat-process",
-            json=payload,
-            headers=headers,
-            proxies=kwargs.get('proxy', {}),
-        )
-
-        if "https://fk1.v50.ltd" not in response.text:
-            yield response.text
+            'user-agent'        : 'Mozilla/5.0 (Windows NT 10
