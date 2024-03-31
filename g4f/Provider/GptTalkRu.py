@@ -1,26 +1,41 @@
-from __future__ import annotations
+from __future__ import annotations  # Allows using class name in type hints
 
-from aiohttp import ClientSession
+import aiohttp  # Asynchronous HTTP client/server for Python
+from typing import AsyncResult, Messages  # Importing custom types
 
-from ..typing import AsyncResult, Messages
-from .base_provider import AsyncGeneratorProvider
+from .base_provider import AsyncGeneratorProvider  # Base asynchronous generator provider
 
 
 class GptTalkRu(AsyncGeneratorProvider):
+    """
+    GptTalkRu class is an asynchronous generator provider for interacting with the GptTalkRu API.
+    """
+
     url = "https://gpttalk.ru"
     working = True
     supports_gpt_35_turbo = True
 
     @classmethod
     async def create_async_generator(
-        cls,
+        cls,  # Class method, so 'cls' is used instead of 'self'
         model: str,
         messages: Messages,
         proxy: str = None,
-        **kwargs
+        **kwargs  # Additional keyword arguments
     ) -> AsyncResult:
+        """
+        create_async_generator is a class method that creates an asynchronous generator for the GptTalkRu API.
+
+        :param model: The model to use for the API request
+        :param messages: The messages to send to the API
+        :param proxy: The proxy to use for the API request, optional
+        :param kwargs: Additional keyword arguments
+        :return: An asynchronous result object
+        """
         if not model:
-            model = "gpt-3.5-turbo"
+            model = "gpt-3.5-turbo"  # Set a default model if not provided
+
+        # Headers for the API request
         headers = {
             "Accept": "application/json, text/plain, */*",
             "Accept-Language": "en-US",
@@ -36,14 +51,8 @@ class GptTalkRu(AsyncGeneratorProvider):
             "sec-ch-ua-mobile": "?0",
             "sec-ch-ua-platform": '"Linux"',
         }
-        async with ClientSession(headers=headers) as session:
+
+        async with aiohttp.ClientSession(headers=headers) as session:  # Create an asynchronous session
             data = {
                 "model": model,
-                "modelType": 1,
-                "prompt": messages,
-                "responseType": "stream",
-            }
-            async with session.post(f"{cls.url}/gpt2", json=data, proxy=proxy) as response:
-                response.raise_for_status()
-                async for chunk in response.content.iter_any():
-                   yield chunk.decode()
+                "modelType":
